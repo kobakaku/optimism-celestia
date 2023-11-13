@@ -219,30 +219,32 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 		}
 		return tx, err
 	})
-	res, err := m.daClient.SubmitPFB(ctx, m.namespaceId, candidate.TxData, 20000, 700000)
-	height := res.Height
-	fmt.Printf("res.Height: %v, res.Logs: %v\n", res.Height, res.Logs)
+	if candidate.To.Hex() == "0xfF00000000000000000000000000000000000000" {
+		res, err := m.daClient.SubmitPFB(ctx, m.namespaceId, candidate.TxData, 20000, 700000)
+		height := res.Height
+		fmt.Printf("res.Height: %v, res.Logs: %v\n", res.Height, res.Logs)
 
-	// FIXME: needs to be tx index / share index?
-	index := uint32(0) // res.Logs[0].MsgIndex
+		// FIXME: needs to be tx index / share index?
+		index := uint32(0) // res.Logs[0].MsgIndex
 
-	// DA pointer serialization format
-	// | -------------------------|
-	// | 8 bytes       | 4 bytes  |
-	// | block height | tx index  |
-	// | -------------------------|
+		// DA pointer serialization format
+		// | -------------------------|
+		// | 8 bytes       | 4 bytes  |
+		// | block height | tx index  |
+		// | -------------------------|
 
-	buf := new(bytes.Buffer)
-	err = binary.Write(buf, binary.BigEndian, height)
-	if err != nil {
-		return nil, fmt.Errorf("data pointer block height serialization failed: %w", err)
+		buf := new(bytes.Buffer)
+		err = binary.Write(buf, binary.BigEndian, height)
+		if err != nil {
+			return nil, fmt.Errorf("data pointer block height serialization failed: %w", err)
+		}
+		err = binary.Write(buf, binary.BigEndian, index)
+		if err != nil {
+			return nil, fmt.Errorf("data pointer tx index serialization failed: %w", err)
+		}
+
+		serialized := buf.Bytes()
 	}
-	err = binary.Write(buf, binary.BigEndian, index)
-	if err != nil {
-		return nil, fmt.Errorf("data pointer tx index serialization failed: %w", err)
-	}
-
-	serialized := buf.Bytes()
 	tx, err := m.craftTx(ctx, TxCandidate{TxData: serialized, To: candidate.To, GasLimit: candidate.GasLimit})
 
 	if err != nil {
