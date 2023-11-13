@@ -64,6 +64,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
+	daCfg, err := rollup.NewDAConfig(flags.DaRPC.Value, flags.NamespaceId.Value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load da config: %w", err)
+	}
+
 	syncConfig := NewSyncConfig(ctx)
 
 	haltOption := ctx.String(flags.RollupHalt.Name)
@@ -72,11 +77,12 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	}
 
 	cfg := &node.Config{
-		L1:     l1Endpoint,
-		L2:     l2Endpoint,
-		L2Sync: l2SyncEndpoint,
-		Rollup: *rollupConfig,
-		Driver: *driverConfig,
+		L1:       l1Endpoint,
+		L2:       l2Endpoint,
+		L2Sync:   l2SyncEndpoint,
+		Rollup:   *rollupConfig,
+		DAConfig: *daCfg,
+		Driver:   *driverConfig,
 		RPC: node.RPCConfig{
 			ListenAddr:  ctx.String(flags.RPCListenAddr.Name),
 			ListenPort:  ctx.Int(flags.RPCListenPort.Name),

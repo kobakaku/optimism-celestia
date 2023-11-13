@@ -31,6 +31,8 @@ const (
 	TxSendTimeoutFlagName             = "txmgr.send-timeout"
 	TxNotInMempoolTimeoutFlagName     = "txmgr.not-in-mempool-timeout"
 	ReceiptQueryIntervalFlagName      = "txmgr.receipt-query-interval"
+	DaRpcFlagName                     = "da-rpc"
+	NamespaceIdFlagName               = "namespace-id"
 )
 
 var (
@@ -55,6 +57,8 @@ type DefaultFlagValues struct {
 	NetworkTimeout            time.Duration
 	TxSendTimeout             time.Duration
 	TxNotInMempoolTimeout     time.Duration
+	DaRpc                     string
+	NamespaceId               string
 	ReceiptQueryInterval      time.Duration
 }
 
@@ -145,6 +149,12 @@ func CLIFlagsWithDefaults(envPrefix string, defaults DefaultFlagValues) []cli.Fl
 			Value:   defaults.ReceiptQueryInterval,
 			EnvVars: prefixEnvVars("TXMGR_RECEIPT_QUERY_INTERVAL"),
 		},
+		cli.StringFlag{
+			Name:    NamespaceIdFlagName,
+			Usage:   "Namespace ID of the DA layer",
+			Value:   "e8e5f679bf7116cb",
+			EnvVars: PrefixEnvVar("NAMESPACE_ID"),
+		},
 	}, opsigner.CLIFlags(envPrefix)...)
 }
 
@@ -223,6 +233,8 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		NetworkTimeout:            ctx.Duration(NetworkTimeoutFlagName),
 		TxSendTimeout:             ctx.Duration(TxSendTimeoutFlagName),
 		TxNotInMempoolTimeout:     ctx.Duration(TxNotInMempoolTimeoutFlagName),
+		DaRpc:                     ctx.Duration(DaRpcFlagName),
+		NamespaceId:               ctx.Duration(NamespaceIdFlagName),
 	}
 }
 
@@ -310,6 +322,12 @@ type Config struct {
 	// are required to give up on a tx at a particular nonce without receiving
 	// confirmation.
 	SafeAbortNonceTooLowCount uint64
+
+	// DaRpc is the HTTP provider URL for the Data Availability node.
+	DaRpc string
+
+	// NamespaceId is the id of the namespace of the Data Availability node.
+	NamespaceId string
 
 	// Signer is used to sign transactions when the gas price is increased.
 	Signer opcrypto.SignerFn

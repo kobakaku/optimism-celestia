@@ -227,6 +227,11 @@ def devnet_deploy(paths):
     wait_up(9545)
     wait_for_rpc_server('127.0.0.1:9545')
 
+    log.info('Bringing up DA')
+    run_command(['docker-compose', 'up', '-d', 'da'], cwd=ops_bedrock_dir, env={
+      'PWD': ops_bedrock_dir,
+    })
+
     l2_output_oracle = addresses['L2OutputOracleProxy']
     log.info(f'Using L2OutputOracle {l2_output_oracle}')
     batch_inbox_address = rollup_config['batch_inbox_address']
