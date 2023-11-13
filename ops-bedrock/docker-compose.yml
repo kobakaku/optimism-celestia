@@ -17,6 +17,12 @@ services:
     ports:
       - '26657:26657'
       - '26659:26659'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:26659/header/1']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   l1:
     build:
@@ -122,7 +128,6 @@ services:
       - l2
       - op-node
       - da
-
     build:
       context: ../
       dockerfile: ./op-batcher/Dockerfile
