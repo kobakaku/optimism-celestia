@@ -45,12 +45,6 @@ var (
 		Required: true,
 		EnvVar:   prefixEnvVars("DA_RPC"),
 	}
-	NamespaceIdFlag = cli.StringFlag{
-		Name:     "namespace-id",
-		Usage:    "Namespace ID for DA node",
-		Required: true,
-		EnvVar:   prefixEnvVars("NAMESPACE_ID"),
-	}
 	// Optional flags
 	SubSafetyMarginFlag = &cli.Uint64Flag{
 		Name: "sub-safety-margin",
@@ -98,7 +92,6 @@ var requiredFlags = []cli.Flag{
 	L2EthRpcFlag,
 	RollupRpcFlag,
 	DaRpcFlag,
-	NamespaceIdFlag,
 }
 
 var optionalFlags = []cli.Flag{
