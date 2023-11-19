@@ -51,6 +51,12 @@ var (
 		Value:   "e8e5f679bf7116cb",
 		EnvVars: prefixEnvVars("NAMESPACE_ID"),
 	}
+	AuthToken = &cli.StringFlag{
+		Name:    "auth-token",
+		Usage:   "Authentication Token for DA node",
+		Value:   "",
+		EnvVars: prefixEnvVars("AUTH_TOKEN"),
+	}
 	Network = &cli.StringFlag{
 		Name:    "network",
 		Usage:   fmt.Sprintf("Predefined network selection. Available networks: %s", strings.Join(chaincfg.AvailableNetworks(), ", ")),
@@ -279,6 +285,7 @@ var requiredFlags = []cli.Flag{
 	RPCListenPort,
 	DaRPC,
 	NamespaceId,
+	AuthToken,
 }
 
 var optionalFlags = []cli.Flag{
