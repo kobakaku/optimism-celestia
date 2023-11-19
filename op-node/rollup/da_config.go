@@ -1,33 +1,39 @@
 package rollup
 
 import (
+	"context"
 	"encoding/hex"
-	"time"
 
-	"github.com/celestiaorg/go-cnc"
+	openrpc "github.com/rollkit/celestia-openrpc"
+	"github.com/rollkit/celestia-openrpc/types/share"
 )
 
 type DAConfig struct {
-	Rpc         string
-	NamespaceId [8]byte
-	Client      *cnc.Client
+	Rpc       string
+	Namespace share.Namespace
+	Client    *openrpc.Client
+	AuthToken string
 }
 
-func NewDAConfig(rpc string, namespaceId string) (*DAConfig, error) {
-	var nid [8]byte
-	n, err := hex.DecodeString(namespaceId)
+func NewDAConfig(rpc, token, ns string) (*DAConfig, error) {
+	nsBytes, err := hex.DecodeString(ns)
 	if err != nil {
 		return &DAConfig{}, err
 	}
-	copy(nid[:], n)
-	daClient, err := cnc.NewClient(rpc, cnc.WithTimeout(30*time.Second))
+
+	namespace, err := share.NewBlobNamespaceV0(nsBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := openrpc.NewClient(context.Background(), rpc, token)
 	if err != nil {
 		return &DAConfig{}, err
 	}
 
 	return &DAConfig{
-		NamespaceId: nid,
-		Rpc:         rpc,
-		Client:      daClient,
+		Namespace: namespace,
+		Rpc:       rpc,
+		Client:    client,
 	}, nil
 }
