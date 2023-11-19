@@ -41,7 +41,7 @@ func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, daCfg *rollup.DACo
 }
 
 // OpenData returns a DataIter. This struct implements the `Next` function.
-func (ds *DataSourceFactory) OpenData(ctx context.Context, id eth.BlockID, batcherAddr common.Address) DataIter {
+func (ds *DataSourceFactory) OpenData(ctx context.Context, id eth.BlockID, batcherAddr common.Address) (DataIter, error) {
 	return NewDataSource(ctx, ds.log, ds.cfg, ds.daCfg, ds.fetcher, id, batcherAddr)
 }
 
@@ -64,7 +64,7 @@ type DataSource struct {
 
 // NewDataSource creates a new calldata source. It suppresses errors in fetching the L1 block if they occur.
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
-func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, daCfg *rollup.DAConfig, fetcher L1TransactionFetcher, block eth.BlockID, batcherAddr common.Address) DataIter {
+func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, daCfg *rollup.DAConfig, fetcher L1TransactionFetcher, block eth.BlockID, batcherAddr common.Address) (DataIter, error) {
 	_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
 	if err != nil {
 		return &DataSource{
@@ -74,12 +74,23 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, daCf
 			fetcher:     fetcher,
 			log:         log,
 			batcherAddr: batcherAddr,
-		}
+		}, nil
 	} else {
+		data, err := DataFromEVMTransactions(cfg, daCfg, batcherAddr, txs, log.New("origin", block))
+		if err != nil {
+			return &DataSource{
+				open:        false,
+				id:          block,
+				cfg:         cfg,
+				fetcher:     fetcher,
+				log:         log,
+				batcherAddr: batcherAddr,
+			}, err
+		}
 		return &DataSource{
 			open: true,
-			data: DataFromEVMTransactions(cfg, daCfg, batcherAddr, txs, log.New("origin", block)),
-		}
+			data: data,
+		}, err
 	}
 }
 
@@ -90,7 +101,10 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
 		if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
 			ds.open = true
-			ds.data = DataFromEVMTransactions(ds.cfg, ds.daCfg, ds.batcherAddr, txs, log.New("origin", ds.id))
+			ds.data, err = DataFromEVMTransactions(ds.cfg, ds.daCfg, ds.batcherAddr, txs, log.New("origin", ds.id))
+			if err != nil {
+				return nil, err
+			}
 		} else if errors.Is(err, ethereum.NotFound) {
 			return nil, NewResetError(fmt.Errorf("failed to open calldata source: %w", err))
 		} else {
@@ -109,7 +123,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 // DataFromEVMTransactions filters all of the transactions and returns the calldata from transactions
 // that are sent to the batch inbox address from the batch sender address.
 // This will return an empty array if no valid transactions are found.
-func DataFromEVMTransactions(config *rollup.Config, daCfg *rollup.DAConfig, batcherAddr common.Address, txs types.Transactions, log log.Logger) []eth.Data {
+func DataFromEVMTransactions(config *rollup.Config, daCfg *rollup.DAConfig, batcherAddr common.Address, txs types.Transactions, log log.Logger) ([]eth.Data, error) {
 	var out []eth.Data
 	l1Signer := config.L1Signer()
 	for j, tx := range txs {
@@ -128,19 +142,19 @@ func DataFromEVMTransactions(config *rollup.Config, daCfg *rollup.DAConfig, batc
 			height, index, err := decodeETHData(tx.Data())
 			if err != nil {
 				log.Warn("unable to decode data pointer", "index", j, "err", err)
-				continue
+				return nil, err
 			}
-			log.Warn("requesting celestia namespaced data", "namespace", hex.EncodeToString(daCfg.Namespace.Bytes()), "height", height)
+			log.Info("requesting celestia namespaced data", "namespace", hex.EncodeToString(daCfg.Namespace.Bytes()), "height", height)
 			data, err := daCfg.Client.NamespacedData(context.Background(), daCfg.Namespace, uint64(height))
 			if err != nil {
 				log.Warn("unable to retrieve data from da", "err", err)
-				continue
+				return nil, NewResetError(fmt.Errorf("failed to retrieve data from celestia: %w", err))
 			}
-			log.Warn("retrieved data", "data", hex.EncodeToString(data[index]))
+			log.Debug("retrieved data", "data", hex.EncodeToString(data[index]))
 			out = append(out, data[index])
 		}
 	}
-	return out
+	return out, nil
 }
 
 // decodeETHData will decode the data retrieved from the EVM, this data
