@@ -39,11 +39,11 @@ var (
 		Usage:   "HTTP provider URL for Rollup node",
 		EnvVars: prefixEnvVars("ROLLUP_RPC"),
 	}
-	DaRpcFlag = cli.StringFlag{
+	DaRpcFlag = &cli.StringFlag{
 		Name:     "da-rpc",
 		Usage:    "HTTP provider URL for DA node",
 		Required: true,
-		EnvVar:   prefixEnvVars("DA_RPC"),
+		EnvVars:  prefixEnvVars("DA_RPC"),
 	}
 	// Optional flags
 	SubSafetyMarginFlag = &cli.Uint64Flag{

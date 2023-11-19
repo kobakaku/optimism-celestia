@@ -149,11 +149,11 @@ func CLIFlagsWithDefaults(envPrefix string, defaults DefaultFlagValues) []cli.Fl
 			Value:   defaults.ReceiptQueryInterval,
 			EnvVars: prefixEnvVars("TXMGR_RECEIPT_QUERY_INTERVAL"),
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:    NamespaceIdFlagName,
 			Usage:   "Namespace ID of the DA layer",
 			Value:   "e8e5f679bf7116cb",
-			EnvVars: PrefixEnvVar("NAMESPACE_ID"),
+			EnvVars: prefixEnvVars("NAMESPACE_ID"),
 		},
 	}, opsigner.CLIFlags(envPrefix)...)
 }
@@ -173,6 +173,8 @@ type CLIConfig struct {
 	NetworkTimeout            time.Duration
 	TxSendTimeout             time.Duration
 	TxNotInMempoolTimeout     time.Duration
+	DaRpc                     time.Duration
+	NamespaceId               string
 }
 
 func NewCLIConfig(l1RPCURL string, defaults DefaultFlagValues) CLIConfig {
@@ -234,7 +236,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		TxSendTimeout:             ctx.Duration(TxSendTimeoutFlagName),
 		TxNotInMempoolTimeout:     ctx.Duration(TxNotInMempoolTimeoutFlagName),
 		DaRpc:                     ctx.Duration(DaRpcFlagName),
-		NamespaceId:               ctx.Duration(NamespaceIdFlagName),
+		NamespaceId:               ctx.String(NamespaceIdFlagName),
 	}
 }
 
